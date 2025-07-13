@@ -9,6 +9,19 @@ from PyQt5.QtGui import QBrush, QColor, QPen
 
 import functions
 
+# Creating a subclass of line QGraphicsLineItem that will show a dynamic link between linked Blocks
+class Link(QGraphicsLineItem):
+    def __init__(self, start_item, end_item):
+        super().__init__()
+        self.start_item = start_item
+        self.end_item = end_item
+        self.setPen(QPen(Qt.blue, 2))
+        self.update_position()
+
+    def update_position(self):
+        p1 = self.start_item.sceneBoundingRect().center()
+        p2 = self.end_item.sceneBoundingRect().center()
+        self.setLine(QLineF(p1, p2))
 # Creating a subclass of circle QGraphicsEllispeItem that will serve as linking nodes
 class Node(QGraphicsEllipseItem):
     selected_nodes = [] # Class-level attribute to link nodes two by two
