@@ -4,7 +4,7 @@ import sys
 import json
 
 from PyQt5.QtCore import QLineF, Qt
-from PyQt5.QtWidgets import QApplication, QMainWindow, QGraphicsRectItem, QGraphicsEllipseItem, QGraphicsLineItem, QGraphicsScene, QGraphicsView, QToolBar, QAction, QStatusBar, QInputDialog
+from PyQt5.QtWidgets import QApplication, QMainWindow, QGraphicsItem, QGraphicsRectItem, QGraphicsEllipseItem, QGraphicsLineItem, QGraphicsScene, QGraphicsView, QToolBar, QAction, QStatusBar, QInputDialog
 from PyQt5.QtGui import QBrush, QColor, QPen
 
 import functions
@@ -22,6 +22,7 @@ class Link(QGraphicsLineItem):
         p1 = self.start_item.sceneBoundingRect().center()
         p2 = self.end_item.sceneBoundingRect().center()
         self.setLine(QLineF(p1, p2))
+        self.setPen(QPen(Qt.blue, 2))
         
 # Creating a subclass of circle QGraphicsEllispeItem that will serve as linking nodes
 class Node(QGraphicsEllipseItem):
@@ -32,25 +33,39 @@ class Node(QGraphicsEllipseItem):
         self.setBrush(QBrush(QColor("lightGray")))
         self.setPos(x, y)
 
-        # Enables the node to be selected
-        self.setFlags(QGraphicsEllipseItem.ItemIsSelectable)
+        # List of the links linked to this node
+        self.selected_links = []
+
+        # Enables the node to be selected and detected when moved
+        self.setFlags(QGraphicsEllipseItem.ItemIsSelectable | QGraphicsItem.ItemSendsScenePositionChanges)
     
     def mousePressEvent(self, event):
-        if event.button() == Qt.RightButton:
+        if event.button() == Qt.LeftButton:
            Node.selected_nodes.append(self)
-           if len(Node.selected_nodes) == 2:
-                self.link_nodes(Node.selected_nodes[0], Node.selected_nodes[1])
-                Node.selected_nodes.clear()
+           if len(Node.selected_nodes) == 2 :    
+            if Node.selected_nodes[0].scenePos() != Node.selected_nodes[1].scenePos():
+                # make a protection against link duplicates
+                self.linkNodes(Node.selected_nodes[0], Node.selected_nodes[1])
+                
+            Node.selected_nodes.clear()
         else:
             super().mousePressEvent(event)
 
-    def link_nodes(self, node1, node2):
+    def linkNodes(self, node1, node2):
         scene = node1.scene()
-        p1 = node1.sceneBoundingRect().center()
-        p2 = node2.sceneBoundingRect().center()
-        line = QGraphicsLineItem(QLineF(p1, p2))
-        line.setPen(QPen(Qt.blue, 2))
-        scene.addItem(line)
+        link = Link(node1, node2)
+        node1.selected_links.append(link)
+        node2.selected_links.append(link)
+        scene.addItem(link)
+    
+    def itemChange(self, change, value):
+        if change == QGraphicsItem.ItemScenePositionHasChanged:
+            print(f"Scene position changed to: {self.scenePos()}")
+            for l in self.selected_links:
+                print(type(l))
+                l.update_position()
+        return super().itemChange(change, value)
+            
 
 # Creating a subclass of rectangle QGraphicsRectItem to put in the canva QGraphicsScene
 class Block(QGraphicsRectItem):
@@ -78,6 +93,11 @@ class Block(QGraphicsRectItem):
         node.setToolTip(f"{name} node") # Displays the node name when the mouse hovers over it
         node.setZValue(1)  # Makes sure it's drawn above the block
         self.node_list.append(node)
+
+    def Change(self, change, value):
+            if change == QGraphicsItem.ItemScenePositionHasChanged:
+                print(f"Chnagee cene position changed to: {self.scenePos()}")
+            return super().Change(change, value)
 
         # Enables them to be linked with a QGraphicsLineItem
     #def mousePressEvent :
